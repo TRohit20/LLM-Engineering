@@ -61,7 +61,7 @@ Text: <{text}>
 - **One way to reduce hallucinations or come through to instruct the model to first find any relevant information, answer the questions or request made based on those relevant info and have a way to trace their way back to source documents.**
 
 ## Iterative Prompt Development
-Idea ---> Implement the prompt ---> Experimental result ---> Error Analysis ---> Refine the idea and/or the prompt ---> Repeat
+**Idea ---> Implement the prompt ---> Experimental result ---> Error Analysis ---> Refine the idea and/or the prompt ---> Repeat**
 
 - There is no perfect prompt especially for your applications.
 - To iterate, find out what is lacking in the response, what is the target and keep iterating the prompt to get closer and closer to the desired output
@@ -76,3 +76,65 @@ Idea ---> Implement the prompt ---> Experimental result ---> Error Analysis --->
 - Summaries might involve topics we do not require or relate to the prompt or concern, In such cases, you can use 'Extract' instead of summary.
 
 ## Inferences
+The kind of tasks where the model takes the text or data and does some kind of analysis on it such as sentiment analysis, extracting labels or names etc.
+For instance, you can get the sentiment out of a review or tweets using the sentiment prompt. You can use the output for processing maybe.
+
+You can use this to extract specific information which actually a part of NLP, Let's say you ask to extract certain information, then ask for the format of the output to be JSON, then you can use the output which is of JSON format can be easily stored in a python dictionary or list of dictionaries and used for further processing.
+
+**You can do both the above cases and more inferences with data within just a single prompt**
+
+You can also give it a long piece of text and prompt the model to infer the topics of the conversation or in the conversation. You can also use a LLM to index into a list of topics.
+```python
+prompt = f"""
+Determine five topics that are being discussed in the \
+following text, which is delimited by triple backticks.
+
+Make each item one or two words long. 
+
+Format your response as a list of items separated by commas.
+
+Text sample: '''{conversation}'''
+"""
+response = get_completion(prompt)
+print(response)
+```
+## Transforming
+You can use a LLM to transform your input into a desired output.
+- LLMs are trained on many languages and sources to varying degrees of proficiency.
+- You can translate text from one language to another.
+- You can also do multiple translations at once. (Maybe a Universal Translator)
+- You can also translate text based on the relation such as formal or informal
+- Similar to above, you can transform the tone of the text such as the way you mail a company is different from the way you text your friend and more.
+- You can also tranform between formats such as from JSON to HTML or from HTML to JSON (Prompt should describe how the input and output are supposed to be).
+- You can also use LLMs to do spell check or grammar check or proofread.
+- You can ask the model to follow a style guide, change tone and address certain level of users and also have the output in a markdown format and more.
+
+## Expanding
+The LLM can also be used to take smaller pieces of text and use it to write or respond with longer messages or content using another parameter of the moedel called temperature. But you need to use this in a responsible way.
+- For instance, you can be sending mails as customer service using sentiments by prompting among the lines as " You are a AI customer service bot, do ...."
+```python
+prompt = f"""
+You are a customer service AI assistant.
+Your task is to send an email reply to a valued customer.
+Given the customer email delimited by ```, \
+Generate a reply to thank the customer for their review.
+If the sentiment is positive or neutral, thank them for \
+their review.
+If the sentiment is negative, apologize and suggest that \
+they can reach out to customer service. 
+Make sure to use specific details from the review.
+Write in a concise and professional tone.
+Sign the email as `AI customer agent`.
+Customer review: ```{review}```
+Review sentiment: {sentiment}
+"""
+```
+- Temperature is simply defined the degree of randomness, higher the temperature, higher the randomness and risk.
+- In standard application where reliability and predictability is crucial, use 0 which is default, increase as per your choice if you want some creativity or randomness.
+- You get more varying outputs with more variations when you have higher temperature. 0 has less variations in output.
+- 
+## Building a ChatBot using LLM
+Even ChatGPT is a web UI that lets user have conversations with it. Similarly you can build custom chatbots like Customer Service Assistant, Tutor, planner or Order taker for a restaurant etc based on your application. 
+- Chat models like chatGPT are trained to take series of messages as input and return a model generated message as output.
+- Applications like chatGPT are trained to take a series of messages from user as input and return a model generated message as output.
+- To create a chatbot, you can have a list of messages that can passed to the model from various roles such as "system"(Usually the first message), "user", "assistant" and so on.
