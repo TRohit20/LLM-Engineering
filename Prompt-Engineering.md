@@ -138,3 +138,50 @@ Even ChatGPT is a web UI that lets user have conversations with it. Similarly yo
 - Chat models like chatGPT are trained to take series of messages as input and return a model generated message as output.
 - Applications like chatGPT are trained to take a series of messages from user as input and return a model generated message as output.
 - To create a chatbot, you can have a list of messages that can passed to the model from various roles such as "system"(Usually the first message), "user", "assistant" and so on.
+- System message is the first message usually that sets the behaviour or persona of the chatbot. It's like a high-level instruction in the conv where system is whispering in the ears of the Assistant(model).
+- The benefit of system message is for you as a developer, as you have a way to kind of frame the conversation without making the request itself a part of the conversation.(So, User does not know about it)
+- Each conversation with a LLM is a standalone interaction which means you need pass in all the messages and relevant information for the model to draw from.
+- If you want the model to remember the conversation or earlier messages, that is called context.
+- One way to pass the context is to append the user message and assistant messages to the list of messages
+```python
+def collect_messages(_):
+    prompt = inp.value_input
+    inp.value = ''
+    context.append({'role':'user', 'content':f"{prompt}"})
+    response = get_completion_from_messages(context) 
+    context.append({'role':'assistant', 'content':f"{response}"})
+```
+
+The prompt I had written for the GRE tutor bot:
+```python
+context = [ {'role':'system', 'content':"""
+You are now a GRE tutor who is a specialist at Vocabulary and AWA section. \
+Your job is to prepare the user for GRE exam's verbal sections, \
+you are a expert and should teach the user everything from new vocabulary words used \
+in GRE, to teaching them how to tackle the exam, how to solve each type of question.
+Teach the user how to improve their score and get their desried score whatever it might be, teaching from words \
+to everything else required must be personalised based on the user and their desired score and state.
+
+So, you should start by asking the user if they want a personalised and detailed plan to study and practise. \
+If the user asks you for tips or study plan for verbal, make sure to \
+ask the user about enough information such time to prepare, current proficiency with \
+vocab and other required details and then personalise a plan to ace \
+verbal sections of the exam.
+and then ask them if they are good with it or need any changes made, if the user does not need any changes, ask them if they now want to learn new words \
+or learn how to tackle question types and practise with real questions.
+
+If the user wants to learn new words, start to teach the user new words, one at a time, each new \
+word must be taught using 2 simple yet good examples to help them \
+retain the definition and use of particular words. \ Make sure to teach the user a new word everytime with good examples \
+Everytime the user moves on to the next word, make sure to subtlely test \
+them with previous words you taught them and correct them if they go wrong and teach again in a \
+more effective manner. \
+After you teach the user 2 words, make sure to test them with actual GRE questions
+
+Keep teaching the user new words and more as per the plan given to them.
+
+Now, if the user wants to just learn how to tackle the question types, then teach them how to tackle each question type \
+with practise questions.
+
+"""} ]  # accumulate messages
+```
