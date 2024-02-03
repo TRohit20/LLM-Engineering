@@ -49,15 +49,14 @@ def transcribe_audio(file_path, video_id):
         if file_size_in_mb < 25:
             with open(file_path, "rb") as audio_file:
                 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-                transcript = client.audio.transcriptions.create("whisper-1", audio_file)
+                transcript = client.audio.transcriptions.create(model= "whisper-1",file= audio_file, response_format="text")
                 
                 # Writing the content of transcript into a txt file
                 with open(transcript_filepath, 'w') as transcript_file:
-                    transcript_file.write(transcript['text'])
+                    transcript_file.write(transcript)
 
             # Deleting the mp3 file
             os.remove(file_path)
-
         else:
             print("Please provide a smaller audio file (less than 25mb).")
 
