@@ -1,7 +1,7 @@
 from langchain.document_loaders import youtube
 import streamlit as st 
 
-from brain import download_audio, transcribe_audio, generate_summary
+from brain import download_audio, transcribe_audio, generate_summary, generate_answer
 
 st.set_page_config(page_title="Y-GPT")
 st.header="YOUR YOUTUBE VIDEO URL"
@@ -15,3 +15,8 @@ if st.button("Submit",type="primary"):
         transcribe_audio(audio_file_path[0], audio_file_path[1])
         summary = generate_summary(url=url)
         st.markdown(summary)
+
+question = st.text_input("Ask something")
+if st.button("generate answer", type="primary"):
+    answer = generate_answer(url=url, question=question)
+    st.markdown(answer)
