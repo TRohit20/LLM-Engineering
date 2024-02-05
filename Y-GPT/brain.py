@@ -8,16 +8,16 @@ from moviepy.editor import *
 from pytube import YouTube
 from dotenv import load_dotenv
 
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.document_loaders import TextLoader
+from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
-from langchain.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-from langchain_openai import ChatOpenAI 
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain.chains.combine_documents.stuff import StuffDocumentsChain
 from langchain.chains.llm import LLMChain
 from langchain.prompts import PromptTemplate
+from langchain_community.document_loaders import TextLoader
+from langchain_community.vectorstores import chroma
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 
 load_dotenv()
 
@@ -138,3 +138,93 @@ def generate_summary(url: str) -> str:
         llm_chain = LLMChain(llm=llm, prompt=prompt)
         stuff_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="docs")
         return stuff_chain.run(docs)
+
+@st.cache_data(show_spinner=False)
+def generate_answer(url: str, question: str) -> str:
+
+    print("Entered Answer gen function")
+
+    # Define the prompt
+    prompt = """{context}
+
+    Use the above pieces of context to answer the following question: {question}
+    If you don't know the answer, just say that you don't know or verify and tell that the video does not cover about it, don't try to make up an answer.
+    Use two sentences minimum and keep the answer as concise and comprehensive as possible.
+    Always say "thanks for asking!" at the end of the answer.
+
+    Helpful Answer:
+    """
+    custom_prompt = PromptTemplate.from_template(prompt)
+
+    print("Prompt passed")
+
+    # Extract the video_id from the url
+    query = urlparse(url).query
+    params = parse_qs(query)
+    video_id = params["v"][0]
+
+    # The path of the audio file
+    audio_path = f"tmp/{video_id}.mp3"
+
+    # The path of the transcript
+    transcript_filepath = f"tmp/{video_id}.txt"
+
+    if os.path.exists(transcript_filepath):
+        # Generating summary of the text file
+        with open(transcript_filepath) as f:
+            transcript_file = f.read()
+
+        loader = TextLoader(transcript_filepath, encoding="utf8")
+        docs = loader.load()
+        llm = ChatOpenAI(temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"), model_name="gpt-3.5-turbo-1106")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        print("LLM verified and Docs stored in VBD")
+        
+        # Retrieve and generate using the relevant snippets of the video
+        vectorstore = chroma.Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings(api_key=os.environ.get("OPENAI_API_KEY")))
+        retriever = vectorstore.as_retriever()
+        print("retriever job done")
+        
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | custom_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        print(rag_chain.invoke(question))
+        return rag_chain.invoke(question)
+    
+    else: 
+        download_audio(url)
+
+        # Transcribe the mp3 audio to text
+        transcribe_audio(audio_path, video_id)
+
+        loader = TextLoader(transcript_filepath, encoding="utf8")
+        docs = loader.load()
+        llm = ChatOpenAI(temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"), model_name="gpt-3.5-turbo-1106")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        
+        # Retrieve and generate using the relevant snippets of the video
+        vectorstore = chroma.Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings(api_key=os.environ.get("OPENAI_API_KEY")))
+        retriever = vectorstore.as_retriever()
+        
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | custom_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        return rag_chain.invoke(question)
