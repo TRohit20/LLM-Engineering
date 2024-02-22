@@ -1,7 +1,7 @@
 from langchain.document_loaders import youtube
 import streamlit as st 
 
-from brain import download_audio, transcribe_audio, generate_summary, generate_answer
+from brain import generate_summary, generate_answer
 
 with st.sidebar:
     st.markdown("### 🎥 Y-GPT: Your Shortcut to Video Insights")
