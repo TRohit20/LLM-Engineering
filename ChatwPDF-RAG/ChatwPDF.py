@@ -1,20 +1,20 @@
 # Import necessary libraries
 import streamlit as st
-import openai
-from langchain.chains import RetrievalQA
-from langchain.chat_models import ChatOpenAI
+from openai import OpenAI
 from langchain.docstore.document import Document
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores.faiss import FAISS
 from pypdf import PdfReader
-import faiss
 import os
 import re
 from io import BytesIO
 from typing import Tuple, List
-import pickle
+from dotenv import load_dotenv
 
+load_dotenv()
+
+client = OpenAI(api_key= os.environ.get('OPENAI_API_KEY'))
 # Function to parse PDF and extract text
 def parse_pdf(file: BytesIO, filename: str) -> Tuple[List[str], str]:
     pdf = PdfReader(file)
@@ -40,7 +40,7 @@ def text_to_docs(text: List[str], filename: str) -> List[Document]:
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=4000,
             separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""],
-            chunk_overlap=0,
+            chunk_overlap=10,
         )
         chunks = text_splitter.split_text(doc.page_content)
         for i, chunk in enumerate(chunks):
@@ -69,22 +69,19 @@ def get_index_for_pdf(pdf_files, pdf_names, openai_api_key):
 # Set the title for the Streamlit app
 st.title("RAG enhanced Chatbot")
 
-# Set up the OpenAI API key 
-openai.api_key = st.secrets["OPENAI_API_KEY"]
-
 # Cached function to create a vectordb for the provided files
-@st.cache_data
+@st.cache_resource
 def create_vectordb(files, filenames):
     # Show a spinner while creating the vectordb
     with st.spinner("Vector database"):
         vectordb = get_index_for_pdf(
-            [file.getvalue() for file in files], filenames, openai.api_key
+            [file.getvalue() for file in files], filenames, client.api_key
         )
     return vectordb
 
 
 # Upload files using Streamlit's file uploader
-pdf_files = st.file_uploader("", type="pdf, csv, txt, doc", accept_multiple_files=True)
+pdf_files = st.file_uploader("", type="pdf", accept_multiple_files=True)
 
 # If PDF files are uploaded, create the vectordb and store it in the session state
 if pdf_files:
@@ -95,13 +92,13 @@ if pdf_files:
 prompt_template = """
     You are a helpful Assistant who answers to users questions based on multiple contexts given to you.
 
-    Keep your answer short and to the point.
+    Keep your answer elaborate but to the point with citations
     
     The evidence are the context of the pdf extract with metadata. 
     
     Carefully focus on the metadata specially 'filename' and 'page' whenever answering.
     
-    Make sure to add filename and page number at the end of sentence you are citing to.
+    Make sure to add filename, page and line number at the end of sentence you are citing to.
         
     Reply "Not applicable" if text is irrelevant.
      
@@ -152,10 +149,10 @@ if question:
     # Call ChatGPT with streaming and display the response as it comes
     response = []
     result = ""
-    for chunk in openai.ChatCompletion.create(
+    for chunk in client.chat.completions.create(
         model="gpt-3.5-turbo", messages=prompt, stream=True
     ):
-        text = chunk.choices[0].get("delta", {}).get("content")
+        text = chunk.choices[0].delta.content
         if text is not None:
             response.append(text)
             result = "".join(response).strip()
