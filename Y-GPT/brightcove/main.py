@@ -35,7 +35,7 @@ def get_videos():
     
     return video_data
 
-get_videos()
+# get_videos()
 
 def download_video(video_id: str):
     access_token = get_access_token()
@@ -49,8 +49,8 @@ def download_video(video_id: str):
             src_value = source.get('src')
             print(src_value)
             if src_value:
-                subprocess.run(["ffmpeg", "-i", src_value, f"{video_id}.mp4"])
-            return src_value
+                subprocess.run(["ffmpeg", "-i", src_value, f"tmp/{video_id}.mp4"])
+            # return src_value
     else:
         print("failed")
 

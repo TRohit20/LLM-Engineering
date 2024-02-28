@@ -1,7 +1,7 @@
 from langchain.document_loaders import youtube
 import streamlit as st 
 
-from brain import generate_summary, generate_answer
+from brain import generate_summary, generate_answer, generate_summary_for_brightcove
 
 with st.sidebar:
     st.markdown("### 🎥 Y-GPT: Your Shortcut to Video Insights")
@@ -13,9 +13,9 @@ with st.sidebar:
         
 st.markdown('## 🎬 Talk with YouTube Videos') 
 
-choice = st.radio("Please choose an option :", ('Generate Summary', 'Generate Answer to a Question'), horizontal=True)
+choice = st.radio("Please choose an option :", ('Generate Summary', 'Generate Answer to a Question', 'Brightcove Video'), horizontal=True)
 
-st.markdown('#### 📼 Step 1 : Enter a YouTube Video URL')
+st.markdown('#### 📼 Step 1 : Enter a Video URL')
 url = st.text_input("URL :", placeholder="https://www.youtube.com/watch?v=************")
 
 if choice == "Generate Summary":
@@ -37,6 +37,10 @@ elif choice == "Generate Answer to a Question":
             answer = generate_answer(url=url, question=question)
         st.markdown(f"🤖 {question}")
         st.success(answer)
+elif choice == "Brightcove Video":
+    if st.button("Summary"):
+        with st.spinner("Retrieving Video and Generating Summary"):
+            generate_summary_for_brightcove(url=url)
 
 # Hide Left Menu
 st.markdown("""<style>

@@ -19,6 +19,8 @@ from langchain_community.vectorstores import chroma
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
+from brightcove.main import download_video
+
 load_dotenv()
 
 def download_audio(url: str) -> [str,str]:
@@ -228,3 +230,69 @@ def generate_answer(url: str, question: str) -> str:
         )
 
         return rag_chain.invoke(question)
+    
+
+@st.cache_data(show_spinner=False)
+def generate_summary_for_brightcove(url: str) -> str:
+
+    print("Entered Brightcove summary function")
+
+    # Define prompt
+    prompt_template = """Here is the video transcript:"{docs}"
+                    Given above is the transcript of a video. Provide a concise yet comprehensive summary that captures the main points, key discussions, and any notable insights or takeaways.
+                    How to perform this task:
+                    First, break the transcript into logical sections based on topic or theme. Then, generate a concise summary for each section. Finally, combine these section summaries into an overarching summary of the entire video. The combined summary is what you should return back to me.
+                    Things to focus on and include in your final summary:
+                    - Ensure to extract the key insights, theories, steps, revelations, opinions, etc discussed in the video. Ensure that the summary provides a clear roadmap for listeners who want to implement the advice or insights(if any) shared.
+                    - Identify any controversial or heavily debated points in the video. Summarize the various perspectives presented, ensuring a balanced representation of the video or points in the video.
+                    - Along with a content summary, describe the overall mood or tone of the video. Were there moments of tension, humor, or any other notable ambiance details?
+                    - Ensure the summary captures all the essense and is in MINIMUM 10 bullet points(can exceed based on the content and aspects)
+                    
+                    SUMMARY:"""
+    prompt = PromptTemplate.from_template(prompt_template)
+
+    video_id = url.split("/")[-2]
+
+    download_video(video_id=video_id)
+    video_path = f"videos/{video_id}.mp4"
+    
+    # The path of the audio file
+    audio_path = f"tmp/{video_id}.mp3"
+
+    # The path of the transcript
+    transcript_filepath = f"tmp/{video_id}.txt"
+
+    # Check if the transcript file already exist
+    if os.path.exists(transcript_filepath):
+        # Generating summary of the text file
+        with open(transcript_filepath) as f:
+            transcript_file = f.read()
+    
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        texts = text_splitter.split_text(transcript_file)
+        docs = [Document(page_content=t) for t in texts[:10]]
+        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"))
+        # print("llm verified and running")
+        llm_chain = LLMChain(llm=llm, prompt=prompt)
+        stuff_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="docs")
+        # print("summary generated")
+        print(stuff_chain.run(docs))
+        return stuff_chain.run(docs)
+    
+    else: 
+        download_audio(url)
+
+        # Transcribe the mp3 audio to text
+        transcribe_audio(audio_path, video_id)
+
+        # Generating summary of the text file
+        with open(transcript_filepath) as f:
+            transcript_file = f.read()
+
+        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+        texts = text_splitter.split_text(transcript_file)
+        docs = [Document(page_content=t) for t in texts[:10]]
+        llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"))
+        llm_chain = LLMChain(llm=llm, prompt=prompt)
+        stuff_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="docs")
+        return stuff_chain.run(docs)
