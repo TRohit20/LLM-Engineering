@@ -1,8 +1,8 @@
 import os
 import requests
 import json
+import subprocess
 from dotenv import load_dotenv
-import m3u8_To_MP4
 
 load_dotenv()
 
@@ -20,7 +20,7 @@ def get_access_token():
         print(access_token)
     return access_token
 
-def get_video():
+def get_videos():
     access_token = get_access_token()
     headers = { 'Authorization': 'Bearer ' + access_token, "Content-Type": "application/json" }
 
@@ -30,14 +30,14 @@ def get_video():
     
     if r.status_code == 200:
         video_data = r.json()
-        with open('video_data.json', 'w') as file:
+        with open('video_data.json', 'w') as file:  
             json.dump(video_data, file, indent=4)
     
     return video_data
 
-# get_video()
+get_videos()
 
-def get_video_sources(video_id: str):
+def download_video(video_id: str):
     access_token = get_access_token()
     headers = { 'Authorization': 'Bearer ' + access_token, "Content-Type": "application/json" }
     url = ("https://cms.api.brightcove.com/v1/accounts/{pubid}/videos/{videoid}/sources").format(pubid=pub_id,videoid=video_id)
@@ -48,12 +48,14 @@ def get_video_sources(video_id: str):
         for source in video_sources:
             src_value = source.get('src')
             print(src_value)
+            if src_value:
+                subprocess.run(["ffmpeg", "-i", src_value, f"{video_id}.mp4"])
             return src_value
-            # m3u8_To_MP4.multithread_download(f'{src_value}')
     else:
         print("failed")
 
-get_video_sources("")    
+# download_video("6309247301112")
+# download_video(6330655456112)
 
 def sources_through_refid(ref_id: str):
     access_token = get_access_token()
@@ -63,8 +65,10 @@ def sources_through_refid(ref_id: str):
     r = requests.get(url, headers= headers)
     if r.status_code == 200:
         sources = r.json()
+        with open('video_source.json','w') as file:
+            json.dump(sources,file)
         print(sources)
     else:
         print("failed")
 
-sources_through_refid("MedePro_ETE_Test6")
+# sources_through_refid("MedePro_ETE_Test6")
