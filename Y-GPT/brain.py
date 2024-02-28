@@ -48,7 +48,7 @@ def download_audio(url: str) -> [str,str]:
 
 def transcribe_audio(file_path, video_id):
         
-        # print("Transcription in process")
+        print("Transcription in process")
 
         # The path of the transcript
         transcript_filepath = f"tmp/{video_id}.txt"
@@ -74,12 +74,12 @@ def transcribe_audio(file_path, video_id):
         else:
             print("Please provide a smaller audio file (less than 25mb).")
 
-        # print("exiting transcription function")
+        print("exiting transcription function")
 
 @st.cache_data(show_spinner=False)
 def generate_summary(url: str) -> str:
 
-    # print("Entered summary function")
+    print("Entered summary function")
 
     # Define prompt
     prompt_template = """Here is the video transcript:"{docs}"
@@ -252,12 +252,14 @@ def generate_summary_for_brightcove(url: str) -> str:
     prompt = PromptTemplate.from_template(prompt_template)
 
     video_id = url.split("/")[-2]
-
     download_video(video_id=video_id)
-    video_path = f"videos/{video_id}.mp4"
-    
-    # The path of the audio file
+    video_path = f"tmp/{video_id}.mp4"
+
+    # Extract Audio from Video
+    video = VideoFileClip(video_path)
+    audio= video.audio.write_audiofile(f"tmp/{video_id}.mp3")
     audio_path = f"tmp/{video_id}.mp3"
+    print(audio_path)
 
     # The path of the transcript
     transcript_filepath = f"tmp/{video_id}.txt"
@@ -280,8 +282,6 @@ def generate_summary_for_brightcove(url: str) -> str:
         return stuff_chain.run(docs)
     
     else: 
-        download_audio(url)
-
         # Transcribe the mp3 audio to text
         transcribe_audio(audio_path, video_id)
 

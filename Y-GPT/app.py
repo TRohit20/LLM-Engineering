@@ -40,7 +40,9 @@ elif choice == "Generate Answer to a Question":
 elif choice == "Brightcove Video":
     if st.button("Summary"):
         with st.spinner("Retrieving Video and Generating Summary"):
-            generate_summary_for_brightcove(url=url)
+            summary = generate_summary_for_brightcove(url=url)
+        st.markdown(f"📃 Video Summary:")
+        st.success(summary)
 
 # Hide Left Menu
 st.markdown("""<style>

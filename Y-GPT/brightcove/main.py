@@ -50,7 +50,8 @@ def download_video(video_id: str):
             print(src_value)
             if src_value:
                 subprocess.run(["ffmpeg", "-i", src_value, f"tmp/{video_id}.mp4"])
-            # return src_value
+                print("Video downloaded")
+            return src_value
     else:
         print("failed")
 
