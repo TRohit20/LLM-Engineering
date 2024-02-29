@@ -296,3 +296,98 @@ def generate_summary_for_brightcove(url: str) -> str:
         llm_chain = LLMChain(llm=llm, prompt=prompt)
         stuff_chain = StuffDocumentsChain(llm_chain=llm_chain, document_variable_name="docs")
         return stuff_chain.run(docs)
+
+
+@st.cache_data(show_spinner=False)
+def generate_answer_for_brightcove(url: str, question: str) -> str:
+    print("Entered Answer gen function")
+
+    # Define the prompt
+    prompt = """{context}
+
+    Use the above pieces of context to answer the following question: {question}
+    If you don't know the answer, just say that you don't know or verify and tell that the video does not cover about it, don't try to make up an answer.
+    Use two sentences minimum and keep the answer as concise and comprehensive as possible.
+    Always say "thanks for asking!" at the end of the answer.
+
+    Helpful Answer:
+    """
+    custom_prompt = PromptTemplate.from_template(prompt)
+
+    print("Prompt passed")
+
+    # Extract the video_id from the url
+    video_id = url.split("/")[-2]
+    print(video_id)
+
+    # The path of the audio file
+    audio_path = f"tmp/{video_id}.mp3"
+
+    # The path of the transcript
+    transcript_filepath = f"tmp/{video_id}.txt"
+
+    if os.path.exists(transcript_filepath):
+        # Generating summary of the text file
+        with open(transcript_filepath) as f:
+            transcript_file = f.read()
+
+        loader = TextLoader(transcript_filepath, encoding="utf8")
+        docs = loader.load()
+        llm = ChatOpenAI(temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"), model_name="gpt-3.5-turbo-1106")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        print("LLM verified and Docs stored in VBD")
+        
+        # Retrieve and generate using the relevant snippets of the video
+        vectorstore = chroma.Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings(api_key=os.environ.get("OPENAI_API_KEY")))
+        retriever = vectorstore.as_retriever()
+        print("retriever job done")
+        
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | custom_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        print(rag_chain.invoke(question))
+        return rag_chain.invoke(question)
+    
+    else: 
+        download_video(video_id=video_id)
+        video_path = f"tmp/{video_id}.mp4"
+
+        #Extract audio from video
+        video = VideoFileClip(video_path)
+        audio= video.audio.write_audiofile(f"tmp/{video_id}.mp3")
+        audio_path = f"tmp/{video_id}.mp3"
+
+        # Transcribe the mp3 audio to text
+        transcribe_audio(audio_path, video_id)
+
+        loader = TextLoader(transcript_filepath, encoding="utf8")
+        docs = loader.load()
+        llm = ChatOpenAI(temperature=0,openai_api_key= os.environ.get("OPENAI_API_KEY"), model_name="gpt-3.5-turbo-1106")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        splits = text_splitter.split_documents(docs)
+        
+        # Retrieve and generate using the relevant snippets of the video
+        vectorstore = chroma.Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings(api_key=os.environ.get("OPENAI_API_KEY")))
+        retriever = vectorstore.as_retriever()
+        
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+
+        rag_chain = (
+            {"context": retriever | format_docs, "question": RunnablePassthrough()}
+            | custom_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        return rag_chain.invoke(question)
