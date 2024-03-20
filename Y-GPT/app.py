@@ -10,7 +10,7 @@ with st.sidebar:
                     you can simply ask the question you want to find the answer to, and in less than 5 minutes, 
                     you can get the answer.<br></div>""", unsafe_allow_html=True)
         
-st.markdown('## 🎬 Talk with YouTube Videos') 
+st.markdown('## 🎬 Talk with Videos') 
 
 choice = st.radio("Please choose an option :", ('Generate Summary', 'Generate Answer to a Question', 'Brightcove Video', 'Brightcove Q&A'), horizontal=True)
 
