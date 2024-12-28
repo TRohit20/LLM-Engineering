@@ -1,0 +1,5 @@
+streamlit==1.41.1
+phidata==2.7.3
+arxiv==2.1.3
+openai==1.58.1
+pypdf==5.1.0
