@@ -2,6 +2,10 @@
 
 LLM stands for a Large Language Model which is essentially a model trained on large amounts of data such as text, images or video.
 
+A Language model is built by using the supervised learning (x->y) to repeatedly predict the next word.
+
+As you know, models like GPT are in a over-simplified manner = Next TOKEN Generator.
+
 ## Two types of LLMS
 There are two general types of LLMs:
 ### Base LLM
@@ -13,6 +17,24 @@ There are two general types of LLMs:
 - Input and outputs are usually instructions and good attempts at following those.
 - And are often further trained with Reinforcement Learning with Human Feedback to help system follow instructions.
 - Practical applications today mostly use Instruction based LLM.
+
+GPT is a base LLM of sorts, ChatGPT is a Instruction-tuned LLM.
+How to get a Base LLM to be an Instruction-tuned LLM? (Take days based on your resources available)
+- Train a base LLM on a lot of data (Depending on the systems/GPU at your disposal, this can take months)
+- Further train the model to fine-tune it with examples where the output follows of an input instruction.
+- Evaluate the outputs by humans based on certain criteria.
+- Further tune the LLM to increase the probability that it generates the more highly rated outputs (Basically RLHF!) - Reinforcement Learning from Human Feedback
+
+System(Sets tone/Behaviour of the assistant) -> Assistant(LLM Responses)
+<-> User(Prompts)
+```python
+messages =  [  
+{'role':'system', 
+ 'content':"""You are an assistant who responds in the style of Dr Drake Ramorey."""},    
+{'role':'user', 
+ 'content':"""Explain to me the cause of Kidney failure for a 040 year old?"""},  
+] 
+```
 
 ## Principles of Prompt Engineering
 1. Write clear and specific instructions with as much detail and clarity as possible(Including tone, other elements are a plus).
@@ -185,3 +207,40 @@ with practise questions.
 
 """} ]  # accumulate messages
 ```
+
+* **Evaluate Inputs**: It might be more efficient to classify your tasks from input and then use the classification of Instruction sets to determine which instructions to use for carrying out the user query. You can do this by defining strict/fixed categories and hard-coding instructions that are relevant for handling tasks under each category.
+
+* **Moderation**: Most LLM providers including OpenAI now support an API called 'Moderation API'. The idea behind the moderation API is to ensure you build the AI system with guardrails and safely without any harmful content or embracing of such. 
+
+- Use Delimiters in your AI powered systems to avoid Prompt injections to prevent users from misusing the service/systems. (You can define your own delimiter). Further make it secure by checking the user input prompt for delimiters and replace them with empty strings.
+
+You can use Moderation API for evaluating the output quality of the system too. Along with other prompting techniques like Chain of thought to thoroughly evaluate the responses from the model, allwowing you to flag answers based on the application use case. 
+
+You can use the model itself to evaluate the answers, then ask to generate a better answer if needed. (But this becomes obsolete with advanced models and increases latency for production applications.) 
+
+## Chain Of Thought
+
+One of the biggest hindrances with AI base models today is reasoning and planning. The exception applies to models like o1 ofc. 
+But largely, these base models are next token generators and are quick to answer which in many cases leads to errors. The models do not actually take the time to think through, plan and reason, thereby producing inaccurate answers. 
+
+One way to tackle this issue of planning and reasoning, apart from paying 200$/month for OpenAI's o1 or other equivalent offerings, is 'Chain Of Thought'.
+
+You can use simple tactics like delimiters and effective instructions to reason at each step before making an analysis and respond.
+
+But again, all applications may not intend to showcase the model's reasoning to the user. In such cases, we can use 'Inner monologue', which is a very fancy way to just say that we hide the model's reasoning from the user.
+
+Or, you can use little more sophisticated techniques like "Chain prompting", where you essentially break down complex tasks and split up a task into multiple sub-tasks, while chaining their outputs/prompts for a cohesive response generation. 
+This allows you to focus on each sub-task, get quality results for each step and you can also use those outputs as inputs for the next step/task and so on to finally reach the desired state.
+The system can be classfied and broken down into sub-tasks, where each sub-task contains instructions related to only a single state of the task. Thereby, reducing the likelihood of errors. And making it easier to handle systems, ensuring model has all the relevant info to carry out the task.
+It also reduces cost as you can choose to skip certain chain of prompt or steps based on the classification or need to carry out the task.
+This is also easier to test.
+Helps overcome context limitations + lower confusion for the model. 
+This technique also allows you to use external tools like web search or Databases.
+Overall, For complex tasks, you can keep track of the state external to the LLM(in your own code).  
+
+* building a System with AI model in a very simple, starter pack manner can be summarised as:
+Evaluate inputs to see if it needs to be flagged -> Use either chain of thought or prompt chaining in order to carry out the task on hand for the application -> Evaluate the Model's responses and return to user if not flagged. 
+
+- Add 'tricky' exmaples opportunistically
+- Develop metrics to measure performance
+- Ideal to automate the testing process for the development/hold-out set. 
